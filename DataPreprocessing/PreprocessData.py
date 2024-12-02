@@ -102,3 +102,22 @@ def process_csv(file_path, l, with_period_id, with_event_type):
 
     return df
 
+# function of reading the csv file and return the processed data
+def read_csv(folder_path, l, with_period_id, with_event_type):
+    """
+    Read all CSV files in a folder and process them.
+
+    Args:
+        folder_path (str): Path to the folder containing the CSV files.
+        l (int): Desired length of token arrays for the 'Tweet' column.
+        with_period_id (bool): Whether to include the 'PeriodID' in the tweet text.
+
+    Returns:
+        pd.DataFrame: Processed DataFrame with columns 'PeriodID', 'EventType' (optional), and 'Tweet' (tokenized).
+    """
+    li = []
+    for filename in os.listdir(folder_path):
+        df = process_csv(folder_path + filename, l, with_period_id, with_event_type)
+        li.append(df)
+    df = pd.concat(li, ignore_index=True)
+    return df
