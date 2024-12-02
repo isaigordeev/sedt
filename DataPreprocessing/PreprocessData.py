@@ -4,6 +4,7 @@ import numpy as np
 from nltk.stem import WordNetLemmatizer
 import re
 import nltk
+import os
 nltk.download('stopwords')
 nltk.download('wordnet')
 
@@ -53,7 +54,7 @@ def format_number_to_string(number):
 
     return f"{number:03d}"
 
-def process_csv(file_path, l, with_period_id):
+def process_csv(file_path, l, with_period_id, with_event_type):
     """
     Process a CSV file to extract and tokenize data.
 
@@ -72,7 +73,10 @@ def process_csv(file_path, l, with_period_id):
     df = pd.read_csv(file_path)
 
     # Extract required columns
-    df = df[['PeriodID', 'EventType', 'Tweet']]
+    if with_event_type:
+        df = df[['PeriodID', 'EventType', 'Tweet']]
+    else:
+        df = df[['PeriodID', 'Tweet']]
 
     if with_period_id:
       # Preprocess text and concatenate with formatted PeriodID
@@ -91,4 +95,29 @@ def process_csv(file_path, l, with_period_id):
 
     df['Tweet'] = df['Tweet'].apply(tokenize_tweet)
 
+    if with_event_type:
+        df = df[['EventType', 'Tweet']]
+    else:
+        df = df[['Tweet']]
+
+    return df
+
+# function of reading the csv file and return the processed data
+def read_csv(folder_path, with_period_id, with_event_type, l=128):
+    """
+    Read all CSV files in a folder and process them.
+
+    Args:
+        folder_path (str): Path to the folder containing the CSV files.
+        l (int): Desired length of token arrays for the 'Tweet' column.
+        with_period_id (bool): Whether to include the 'PeriodID' in the tweet text.
+
+    Returns:
+        pd.DataFrame: Processed DataFrame with columns 'PeriodID', 'EventType' (optional), and 'Tweet' (tokenized).
+    """
+    li = []
+    for filename in os.listdir(folder_path):
+        df = process_csv(folder_path + filename, l, with_period_id, with_event_type)
+        li.append(df)
+    df = pd.concat(li, ignore_index=True)
     return df
