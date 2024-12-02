@@ -4,6 +4,7 @@ import numpy as np
 from nltk.stem import WordNetLemmatizer
 import re
 import nltk
+import os
 nltk.download('stopwords')
 nltk.download('wordnet')
 
@@ -53,7 +54,7 @@ def format_number_to_string(number):
 
     return f"{number:03d}"
 
-def process_csv(file_path, l, with_period_id):
+def process_csv(file_path, l, with_period_id, with_event_type):
     """
     Process a CSV file to extract and tokenize data.
 
@@ -72,7 +73,10 @@ def process_csv(file_path, l, with_period_id):
     df = pd.read_csv(file_path)
 
     # Extract required columns
-    df = df[['PeriodID', 'EventType', 'Tweet']]
+    if with_event_type:
+        df = df[['PeriodID', 'EventType', 'Tweet']]
+    else:
+        df = df[['PeriodID', 'Tweet']]
 
     if with_period_id:
       # Preprocess text and concatenate with formatted PeriodID
@@ -91,4 +95,10 @@ def process_csv(file_path, l, with_period_id):
 
     df['Tweet'] = df['Tweet'].apply(tokenize_tweet)
 
+    if with_event_type:
+        df = df[['EventType', 'Tweet']]
+    else:
+        df = df[['Tweet']]
+
     return df
+
