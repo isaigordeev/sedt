@@ -103,7 +103,7 @@ def process_csv(file_path, l, with_period_id, with_event_type):
     return df
 
 # function of reading the csv file and return the processed data
-def read_csv(folder_path, l, with_period_id, with_event_type):
+def read_csv(folder_path, with_period_id, with_event_type, l=128):
     """
     Read all CSV files in a folder and process them.
 
