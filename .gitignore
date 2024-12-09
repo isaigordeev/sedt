@@ -3,3 +3,4 @@ eval_tweets/
 train_tweets/
 DataPreprocessing/preprocessed data/
 DataPreprocessing/__pycache__/
+DataPreprocessing/np_data/
