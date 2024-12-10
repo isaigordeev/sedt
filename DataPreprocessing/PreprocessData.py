@@ -1,5 +1,5 @@
+import csv
 from transformers import AutoTokenizer
-import pandas as pd
 import numpy as np
 from nltk.stem import WordNetLemmatizer
 import re
@@ -7,6 +7,7 @@ import nltk
 import os
 nltk.download('stopwords')
 nltk.download('wordnet')
+import matplotlib.pyplot as plt
 
 def preprocess_text(text):
     """
@@ -62,48 +63,42 @@ def process_csv(file_path, l, with_period_id, with_event_type):
         file_path (str): Path to the CSV file.
         l (int): Desired length of token arrays for the 'Tweet' column.
         with_period_id (bool): Whether to include the 'PeriodID' in the tweet text.
+        with_event_type (bool): Whether to include 'EventType' in the output.
 
     Returns:
-        pd.DataFrame: Processed DataFrame with columns 'PeriodID', 'EventType', and 'Tweet'.
+        tuple: A tuple of tokenized tweets (NumPy array), IDs, and EventTypes (if included).
     """
-    # Load the tokenizer (default tokenizer from transformers)
     tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+    tweets, ids, event_types = [], [], []
 
-    # Read the CSV file
-    df = pd.read_csv(file_path)
+    with open(file_path, 'r', encoding='utf-8') as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            try:
+                tweet = row['Tweet']
+                tweet_id = row['ID']
+                period_id = int(row['PeriodID']) if with_period_id else None
+                event_type = row['EventType'] if with_event_type else None
 
-    # Extract required columns
-    if with_event_type:
-        df = df[['PeriodID', 'EventType', 'Tweet']]
-    else:
-        df = df[['PeriodID', 'Tweet']]
+                if with_period_id:
+                    tweet = f"{format_number_to_string(period_id)} {preprocess_text(tweet)}"
+                else:
+                    tweet = preprocess_text(tweet)
 
-    if with_period_id:
-      # Preprocess text and concatenate with formatted PeriodID
-        df['Tweet'] = df.apply(
-            lambda row: f"{format_number_to_string(row['PeriodID'])} {preprocess_text(row['Tweet'])}",
-            axis=1
-        )
-    else:
-      # Apply preprocessing to each tweet
-      df['Tweet'] = df['Tweet'].apply(preprocess_text)
+                tokens = tokenizer.encode(tweet, truncation=True, padding="max_length", max_length=l, add_special_tokens=True)
+                tweets.append(tokens)
+                ids.append(tweet_id)
+                if with_event_type:
+                    event_types.append(event_type)
+            except KeyError as e:
+                print(f"Missing expected column in row: {row}")
+                continue
 
-    # Tokenize the 'Tweet' column and pad/truncate to length l
-    def tokenize_tweet(tweet):
-        tokens = tokenizer.encode(tweet, truncation=True, padding="max_length", max_length=l, add_special_tokens=True)
-        return tokens
-
-    df['Tweet'] = df['Tweet'].apply(tokenize_tweet)
-
-    if with_event_type:
-        df = df[['EventType', 'Tweet']]
-    else:
-        df = df[['Tweet']]
-
-    return df
+    tweets = np.array(tweets, dtype=np.int32)
+    return tweets, np.array(ids), np.array(event_types) if with_event_type else None
 
 # function of reading the csv file and return the processed data
-def read_csv(folder_path, with_period_id, with_event_type, l=32):
+def read_csv(folder_path, l, with_period_id, with_event_type):
     """
     Read all CSV files in a folder and process them.
 
@@ -111,13 +106,27 @@ def read_csv(folder_path, with_period_id, with_event_type, l=32):
         folder_path (str): Path to the folder containing the CSV files.
         l (int): Desired length of token arrays for the 'Tweet' column.
         with_period_id (bool): Whether to include the 'PeriodID' in the tweet text.
+        with_event_type (bool): Whether to include 'EventType' in the output.
 
     Returns:
-        pd.DataFrame: Processed DataFrame with columns 'PeriodID', 'EventType' (optional), and 'Tweet' (tokenized).
+        tuple: A tuple of tokenized tweets (NumPy array), IDs, and EventTypes (if included).
     """
-    li = []
+    all_tweets, all_ids, all_event_types = [], [], []
+
     for filename in os.listdir(folder_path):
-        df = process_csv(folder_path + filename, l, with_period_id, with_event_type)
-        li.append(df)
-    df = pd.concat(li, ignore_index=True)
-    return df
+        if filename.endswith(".csv"):
+            file_path = os.path.join(folder_path, filename)
+            tweets, ids, event_types = process_csv(file_path, l, with_period_id, with_event_type)
+            all_tweets.append(tweets)
+            all_ids.append(ids)
+            if with_event_type:
+                all_event_types.append(event_types)
+
+    all_tweets = np.concatenate(all_tweets, axis=0)
+    all_ids = np.concatenate(all_ids, axis=0)
+    all_event_types = np.concatenate(all_event_types, axis=0) if with_event_type else None
+    return all_tweets, all_ids, all_event_types
+
+# function to count number of PAD token, tokenizer defined in the function
+def count_pad_tokens(tokens, pad_token_id): 
+    return tokens.count(pad_token_id)
