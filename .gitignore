@@ -2,6 +2,11 @@ challenge_data/
 eval_tweets/
 train_tweets/
 DataPreprocessing/preprocessed data/
+
+
+# ig ignore
+.idea/
+
 DataPreprocessing/__pycache__/
 DataPreprocessing/np_data/
 *.csv
