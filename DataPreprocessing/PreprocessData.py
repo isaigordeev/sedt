@@ -8,6 +8,9 @@ import os
 nltk.download('stopwords')
 nltk.download('wordnet')
 
+
+from transformers import DistilBertForSequenceClassification
+
 def preprocess_text(text):
     """
     Preprocess text by lowercasing, removing punctuation, numbers, stopwords, and lemmatizing.
