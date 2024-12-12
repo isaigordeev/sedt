@@ -54,7 +54,7 @@ def format_number_to_string(number):
 
     return f"{number:03d}"
 
-def process_csv(tokenizer, file_path, l, with_period_id, with_event_type):
+def process_csv(tokenizer, file_path, l):
     """
     Process a CSV file to extract and tokenize data.
 
@@ -71,20 +71,18 @@ def process_csv(tokenizer, file_path, l, with_period_id, with_event_type):
     df = pd.read_csv(file_path)
 
     # Extract required columns
-    if with_event_type:
-        df = df[['PeriodID', 'EventType', 'Tweet']]
-    else:
-        df = df[['PeriodID', 'Tweet']]
+    df = df[['PeriodID', 'EventType', 'Tweet']]
 
-    if with_period_id:
-      # Preprocess text and concatenate with formatted PeriodID
-        df['Tweet'] = df.apply(
-            lambda row: f"{format_number_to_string(row['PeriodID'])} {preprocess_text(row['Tweet'])}",
-            axis=1
-        )
-    else:
-      # Apply preprocessing to each tweet
-      df['Tweet'] = df['Tweet'].apply(preprocess_text)
+
+    # if with_period_id:
+    #   # Preprocess text and concatenate with formatted PeriodID
+    #     df['Tweet'] = df.apply(
+    #         lambda row: f"{format_number_to_string(row['PeriodID'])} {preprocess_text(row['Tweet'])}",
+    #         axis=1
+    #     )
+    # else:
+    #   # Apply preprocessing to each tweet
+    #   df['Tweet'] = df['Tweet'].apply(preprocess_text)
 
     # Tokenize the 'Tweet' column and pad/truncate to length l
     def tokenize_tweet(tweet):
@@ -92,66 +90,39 @@ def process_csv(tokenizer, file_path, l, with_period_id, with_event_type):
         return tokens
 
     df['Tweet'] = df['Tweet'].apply(tokenize_tweet)
+    df = df[['EventType', 'Tweet']]
 
-    if with_event_type:
-        df = df[['EventType', 'Tweet']]
-    else:
-        df = df[['Tweet']]
 
     return df
 
-def process_csv_groupe_by_period(tokenizer, file_path, l, with_period_id, with_event_type, flatten, piece_size=4096):
-    """
-    Process a CSV file to extract and tokenize data.
-
-    Args:
-        file_path (str): Path to the CSV file.
-        l (int): Desired length of token arrays for the 'Tweet' column.
-        with_period_id (bool): Whether to include the 'PeriodID' in the tweet text.
-
-    Returns:
-        pd.DataFrame: Processed DataFrame with columns 'PeriodID', 'EventType', and 'Tweet'.
-    """
-
-    # Read the CSV file
+def process_csv_groupe_by_period(tokenizer, file_path, l, piece_size=4096):
+    
     df = pd.read_csv(file_path)
-
-    # Extract required columns
-    if with_event_type:
-        df = df[['PeriodID', 'EventType', 'Tweet']]
-    else:
-        df = df[['PeriodID', 'Tweet']]
+    df = df[['PeriodID', 'EventType', 'Tweet']]
 
     # Apply preprocessing to each tweet
     df['Tweet'] = df['Tweet'].apply(preprocess_text)
 
-    # Tokenize the 'Tweet' column and pad/truncate to length l
     def tokenize_tweet(tweet):
         tokens = tokenizer.encode(tweet, truncation=True, padding="max_length", max_length=l, add_special_tokens=True)
         return tokens
-
     df['Tweet'] = df['Tweet'].apply(tokenize_tweet)
-    
-    df_g = df.groupby(['EventType','PeriodID'])['Tweet'].apply(list).reset_index()
-    
-    if flatten:
-        df_g['Tweet'] = df_g['Tweet'].apply(lambda x: list(itertools.chain.from_iterable(x)))
 
-    def split_into_pieces(arr, piece_size=4096):
-        return [arr[i:i + piece_size] for i in range(0, len(arr) - piece_size, piece_size)]
+    df_g = df.groupby(['EventType','PeriodID'])['Tweet'].apply(list).reset_index()
+    df_g['Tweet'] = df_g['Tweet'].apply(lambda x: list(itertools.chain.from_iterable(x)))
+
+    def split_into_pieces(arr):
+        arr = arr[:len(arr) - (len(arr) % piece_size)]
+        return [arr[i:i + piece_size] for i in range(0, len(arr), piece_size)]
 
     df_g['Tweet'] = df_g['Tweet'].apply(split_into_pieces)
     df_g = df_g.explode('Tweet').reset_index(drop=True)
 
-    if with_event_type:
-        df_g = df_g[['EventType', 'Tweet']]
-    else:
-        df_g = df_g[['Tweet']]
-
+    df_g = df_g[['EventType', 'Tweet']]
     return df_g
 
 # function of reading the csv file and return the processed data
-def read_csv(folder_path, with_period_id, with_event_type, l=32):
+def read_csv(folder_path, tokenizer, l=32):
     """
     Read all CSV files in a folder and process them.
 
@@ -165,7 +136,7 @@ def read_csv(folder_path, with_period_id, with_event_type, l=32):
     """
     li = []
     for filename in os.listdir(folder_path):
-        df = process_csv(folder_path + filename, l, with_period_id, with_event_type)
+        df = process_csv_groupe_by_period(tokenizer, folder_path + filename, l)
         li.append(df)
     df = pd.concat(li, ignore_index=True)
     return df
