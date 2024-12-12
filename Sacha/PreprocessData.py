@@ -54,46 +54,46 @@ def format_number_to_string(number):
 
     return f"{number:03d}"
 
-# def process_csv(tokenizer, file_path, l):
-#     """
-#     Process a CSV file to extract and tokenize data.
+def process_csv(tokenizer, file_path, l):
+    """
+    Process a CSV file to extract and tokenize data.
 
-#     Args:
-#         file_path (str): Path to the CSV file.
-#         l (int): Desired length of token arrays for the 'Tweet' column.
-#         with_period_id (bool): Whether to include the 'PeriodID' in the tweet text.
+    Args:
+        file_path (str): Path to the CSV file.
+        l (int): Desired length of token arrays for the 'Tweet' column.
+        with_period_id (bool): Whether to include the 'PeriodID' in the tweet text.
 
-#     Returns:
-#         pd.DataFrame: Processed DataFrame with columns 'PeriodID', 'EventType', and 'Tweet'.
-#     """
+    Returns:
+        pd.DataFrame: Processed DataFrame with columns 'PeriodID', 'EventType', and 'Tweet'.
+    """
 
-#     # Read the CSV file
-#     df = pd.read_csv(file_path)
+    # Read the CSV file
+    df = pd.read_csv(file_path)
 
-#     # Extract required columns
-#     df = df[['PeriodID', 'EventType', 'Tweet']]
-
-
-#     # if with_period_id:
-#     #   # Preprocess text and concatenate with formatted PeriodID
-#     #     df['Tweet'] = df.apply(
-#     #         lambda row: f"{format_number_to_string(row['PeriodID'])} {preprocess_text(row['Tweet'])}",
-#     #         axis=1
-#     #     )
-#     # else:
-#     #   # Apply preprocessing to each tweet
-#     #   df['Tweet'] = df['Tweet'].apply(preprocess_text)
-
-#     # Tokenize the 'Tweet' column and pad/truncate to length l
-#     def tokenize_tweet(tweet):
-#         tokens = tokenizer.encode(tweet, truncation=True, padding="max_length", max_length=l, add_special_tokens=True)
-#         return tokens
-
-#     df['Tweet'] = df['Tweet'].apply(tokenize_tweet)
-#     df = df[['EventType', 'Tweet']]
+    # Extract required columns
+    df = df[['PeriodID', 'EventType', 'Tweet']]
 
 
-#     return df
+    # if with_period_id:
+    #   # Preprocess text and concatenate with formatted PeriodID
+    #     df['Tweet'] = df.apply(
+    #         lambda row: f"{format_number_to_string(row['PeriodID'])} {preprocess_text(row['Tweet'])}",
+    #         axis=1
+    #     )
+    # else:
+    #   # Apply preprocessing to each tweet
+    #   df['Tweet'] = df['Tweet'].apply(preprocess_text)
+
+    # Tokenize the 'Tweet' column and pad/truncate to length l
+    def tokenize_tweet(tweet):
+        tokens = tokenizer.encode(tweet, truncation=True, padding="max_length", max_length=l, add_special_tokens=True)
+        return tokens
+
+    df['Tweet'] = df['Tweet'].apply(tokenize_tweet)
+    df = df[['EventType', 'Tweet']]
+
+
+    return df
 
 def process_csv_groupe_by_period(tokenizer, file_path, l, piece_size=4096):
     
